@@ -1,0 +1,12 @@
+name: 'PR Tests'
+description: 'Auto start pull request tests'
+inputs:
+  token:
+    description: ''
+    required: true
+  teamcity:
+    description: ''
+    required: true
+runs:
+  using: 'node12'
+  main: 'index.js'
