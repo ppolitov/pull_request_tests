@@ -13,7 +13,8 @@ jobs:
     steps:
       - name: Sparse checkout
         run: |
-          REPO="https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/pushplaylabs/chromekick.git"
+          echo "GITHUB_ACTOR: $GITHUB_ACTOR"
+          REPO="https://$GITHUB_ACTOR:${{ secrets.CHROME_TOKEN }}@github.com/pushplaylabs/chromekick.git"
           echo "REPO: ${REPO}"
           git clone --filter=blob:none --sparse --single-branch $REPO
 
