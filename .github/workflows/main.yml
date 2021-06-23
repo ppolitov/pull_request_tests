@@ -1,0 +1,30 @@
+name: Automatic Rebase
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+jobs:
+  rebase:
+    name: Rebase
+    if: github.event.issue.pull_request != '' && contains(github.event.comment.body, '/rebase')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sparse checkout
+        run: |
+          REPO="https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/pushplaylabs/chromekick.git"
+          echo "REPO: ${REPO}"
+          git clone --filter=blob:none --sparse --single-branch $REPO
+
+      - name: Setup git
+        working-directory: ./chromekick
+        run: |
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config user.name "$GITHUB_ACTOR"
+
+          # - name: Rebase
+          #uses: ./actions/rebase
+          #working-directory: ./chromekick
+          #env:
+          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
