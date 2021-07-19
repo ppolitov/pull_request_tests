@@ -17,12 +17,15 @@ async function run() {
   try {
     const token = core.getInput('token');
     const teamcityToken = core.getInput('teamcity');
+    if (!token || !teamcityToken) {
+      console.error('No token found.');
+      return;
+    }
 
     const { payload } = github.context;
     const [owner, repo] = (process.env.GITHUB_REPOSITORY || '').split('/');
     const pull_number = payload.pull_request.number;
     console.log(`Inputs: pull:${pull_number} owner:${owner} repo:${repo}`);
-    console.log('Teamcity:', teamcityToken);
 
     const octokit = github.getOctokit(token);
     const { data: reviews } = await octokit.pulls.listReviews(
@@ -41,7 +44,6 @@ async function run() {
     const branch = `pull/${pull_number}`;
     const headers = {
       'Authorization': `Bearer ${teamcityToken}`,
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
@@ -53,6 +55,7 @@ async function run() {
       headers,
     });
     if (res.status === 200) {
+      console.log('Builds:', res.data.build);
       const builds = res.data.build.filter((b) => b.status === 'SUCCESS');
       if (builds.length > 0) {
         console.log('Already exist successful builds. Skipping...');
@@ -65,13 +68,16 @@ async function run() {
 
     // Starting builds
     const url = `${TEAMCITY_API}/app/rest/buildQueue`;
+    const headers2 = Object.assign(headers, {
+      'Content-Type': 'application/json',
+    });
     for (let buildType in BUILD_TYPES) {
       let body = JSON.stringify({
         branchName: branch,
         buildType: {id: buildType},
         comment: {text: 'Build started from Pull Request page'},
       });
-      let res = await axios({method: 'POST', url, headers, data: body});
+      let res = await axios({method: 'POST', url, headers: headers2, data: body});
       if (res.status === 200) {
         console.log(`Build started: ${buildType}`);
       } else {
