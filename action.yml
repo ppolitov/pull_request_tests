@@ -7,6 +7,9 @@ inputs:
   teamcity:
     description: ''
     required: true
+  pull_number:
+    description: ''
+    required: false
 runs:
   using: 'node12'
   main: 'index.js'

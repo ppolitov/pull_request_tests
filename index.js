@@ -13,10 +13,22 @@ const BUILD_TYPES = [
   'Chromekick_PerftestsLinux',
 ];
 
+async function getCsrf(token) {
+  const headers = {'Authorization': `Bearer ${token}`};
+  const response = await axios.get(
+    `${TEAMCITY_API}/authenticationTest.html?csrf`,
+    {headers});
+  if (response.status === 200) {
+    return response.data;
+  }
+  return null;
+}
+
 async function run() {
   try {
     const token = core.getInput('token');
     const teamcityToken = core.getInput('teamcity');
+    const predefinedPullNumber = core.getInput('pull_number');
     if (!token || !teamcityToken) {
       console.error('No token found.');
       return;
@@ -24,35 +36,45 @@ async function run() {
 
     const { payload } = github.context;
     const [owner, repo] = (process.env.GITHUB_REPOSITORY || '').split('/');
-    const pull_number = payload.pull_request.number;
+    let pull_number = predefinedPullNumber;
+    if (!pull_number)
+      pull_number = payload.pull_request.number;
     console.log(`Inputs: pull:${pull_number} owner:${owner} repo:${repo}`);
 
     const octokit = github.getOctokit(token);
-    const { data: reviews } = await octokit.pulls.listReviews(
-      {owner, repo, pull_number});
-    console.log('reviews:', JSON.stringify(reviews));
+    // const { data: reviews } = await octokit.pulls.listReviews(
+    //  {owner, repo, pull_number});
+    //console.log('reviews:', JSON.stringify(reviews));
 
     const { data: reviewers } = await octokit.pulls.listRequestedReviewers(
       {owner, repo, pull_number});
     console.log('reviewers:', JSON.stringify(reviewers));
 
-    const approved = reviewers.users.length === 0;
-
-    if (!approved)
+    // Not all reviewers approved
+    if (reviewers.users.length !== 0)
       return;
+
+    const csrf = getCsrf(teamcityToken);
+    if (csrf === null) {
+      console.error('Error getting CSRF token.');
+      return;
+    }
 
     const branch = `pull/${pull_number}`;
     const headers = {
       'Authorization': `Bearer ${teamcityToken}`,
-      'Accept': 'application/json',
+      'X-TC-CSRF-Token': csrf,
     };
 
     // Checking if there are successful builds
     const locator = `branch:${branch},state:any,count:9`;
+    const headers1 = Object.assign(headers, {
+      'Accept': 'application/json',
+    });
     let res = await axios({
       url: `${TEAMCITY_API}/app/rest/builds/?locator=${locator}`,
       method: 'GET',
-      headers,
+      headers: headers1,
     });
     if (res.status === 200) {
       console.log('Builds:', res.data.build);
