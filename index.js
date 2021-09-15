@@ -42,17 +42,15 @@ async function run() {
     console.log(`Inputs: pull:${pull_number} owner:${owner} repo:${repo}`);
 
     const octokit = github.getOctokit(token);
-    // const { data: reviews } = await octokit.pulls.listReviews(
-    //  {owner, repo, pull_number});
-    //console.log('reviews:', JSON.stringify(reviews));
 
     const { data: reviewers } = await octokit.pulls.listRequestedReviewers(
       {owner, repo, pull_number});
-    console.log('reviewers:', JSON.stringify(reviewers));
 
     // Not all reviewers approved
-    if (reviewers.users.length !== 0)
+    if (reviewers.users.length !== 0) {
+      console.log('Still in review.');
       return;
+    }
 
     const csrf = getCsrf(teamcityToken);
     if (csrf === null) {
@@ -77,7 +75,7 @@ async function run() {
       headers: headers1,
     });
     if (res.status === 200) {
-      console.log('Builds:', res.data.build);
+      console.log('Builds:', res.data.build.length);
       const builds = res.data.build.filter((b) => b.status === 'SUCCESS');
       if (builds.length > 0) {
         console.log('Already exist successful builds. Skipping...');
