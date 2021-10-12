@@ -92,16 +92,20 @@ async function run() {
       'Content-Type': 'application/json',
     });
     for (let buildType in BUILD_TYPES) {
-      let body = JSON.stringify({
+      let data = {
         branchName: branch,
         buildType: {id: buildType},
         comment: {text: 'Build started from Pull Request page'},
-      });
-      let res = await axios({method: 'POST', url, headers: headers2, data: body});
-      if (res.status === 200) {
-        console.log(`Build started: ${buildType}`);
-      } else {
-        console.warn(`Failed to start build ${buildType}:`, res.statusText);
+      };
+      try {
+        let res = await axios({method: 'POST', url, headers: headers2, data});
+        if (res.status === 200) {
+          console.log(`Build started: ${buildType}`);
+        } else {
+          console.warn(`Failed to start build ${buildType}:`, res.statusText);
+        }
+      } catch(error) {
+        console.error(`Error starting build ${buildType}:`, error.message);
       }
     }
   } catch (error) {
